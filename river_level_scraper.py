@@ -59,3 +59,10 @@ with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
     ])
 
 print("Saved:", level, measurement_time)
+
+# DEBUG: show page title and first 500 chars
+print("PAGE TITLE:", soup.title)
+print("PAGE PREVIEW:")
+print(response.text[:500])
+
+raise RuntimeError("Stopping after debug output")
