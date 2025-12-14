@@ -35,33 +35,9 @@ if level_elem:
     if p:
         measurement_time = p.get_text(strip=True)
 
-if not level or not measurement_time:
-    raise RuntimeError("Failed to scrape river data")
-
-scrape_time = datetime.utcnow().isoformat()
-
-file_exists = os.path.isfile(CSV_FILE)
-
-with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
-    writer = csv.writer(f)
-
-    if not file_exists:
-        writer.writerow([
-            "scrape_time_utc",
-            "river_level",
-            "measurement_time"
-        ])
-
-    writer.writerow([
-        scrape_time,
-        level,
-        measurement_time
-    ])
-
-
-# DEBUG: show page title and first 500 chars
+# DEBUG: show what GitHub Actions is actually receiving
 print("PAGE TITLE:", soup.title)
-print("PAGE PREVIEW:")
+print("PAGE PREVIEW (first 500 chars):")
 print(response.text[:500])
 
 raise RuntimeError("Stopping after debug output")
