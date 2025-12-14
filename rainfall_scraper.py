@@ -3,17 +3,21 @@ import csv
 import os
 from datetime import datetime, timezone
 
-STATION_ID = "133115"
-CSV_FILE = "monyquil_rainfall.csv"
+STATION_NO = "133115"
+CSV_FILE = "monyquil_rainfall_hourly.csv"
 
-URL = (
-    "https://www2.sepa.org.uk/api/Timeseries/Readings"
-    f"?station={STATION_ID}&parameter=rainfall"
+url = (
+    "https://timeseries.sepa.org.uk/KiWIS/KiWIS"
+    "?service=kisters"
+    "&type=queryServices"
+    "&datasource=0"
+    "&request=getTimeseriesValues"
+    f"&ts_path=1/{STATION_NO}/RE/Hour.Total"
+    "&returnfields=Timestamp,Value"
 )
 
-response = requests.get(URL, timeout=30)
+response = requests.get(url, timeout=30)
 response.raise_for_status()
-
 data = response.json()
 
 file_exists = os.path.isfile(CSV_FILE)
@@ -22,19 +26,13 @@ with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
     writer = csv.writer(f)
 
     if not file_exists:
-        writer.writerow([
-            "timestamp_utc",
-            "rainfall_mm"
-        ])
+        writer.writerow(["timestamp_utc", "rainfall_mm"])
 
-    for item in data["items"]:
-        ts = datetime.fromisoformat(
-            item["timestamp"].replace("Z", "+00:00")
-        ).astimezone(timezone.utc)
-
+    for row in data.get("values", []):
+        ts = datetime.fromisoformat(row["Timestamp"]).astimezone(timezone.utc)
         writer.writerow([
             ts.isoformat().replace("+00:00", "Z"),
-            item["value"]
+            row["Value"]
         ])
 
-print("Rainfall data updated")
+print("Hourly rainfall data updated")
