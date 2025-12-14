@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import csv
 from datetime import datetime
 import os
+import re
 
 URL = "https://riverlevels.uk/machrie-water-monyquil-farm"
 CSV_FILE = "machrie_water_levels.csv"
@@ -16,13 +17,23 @@ response.raise_for_status()
 
 soup = BeautifulSoup(response.text, "html.parser")
 
-# Extract river level
-level_elem = soup.find("h2")
-level = level_elem.get_text(strip=True) if level_elem else None
+# Find all h2 elements and look for one that looks like a level (e.g. 0.54m)
+level = None
+level_elem = None
 
-# Extract measurement time
-time_elem = level_elem.find_next_sibling("p") if level_elem else None
-measurement_time = time_elem.get_text(strip=True) if time_elem else None
+for h2 in soup.find_all("h2"):
+    text = h2.get_text(strip=True)
+    if re.match(r"^\d+(\.\d+)?m$", text):
+        level = text
+        level_elem = h2
+        break
+
+# The time is in the paragraph immediately after the level
+measurement_time = None
+if level_elem:
+    p = level_elem.find_next_sibling("p")
+    if p:
+        measurement_time = p.get_text(strip=True)
 
 if not level or not measurement_time:
     raise RuntimeError("Failed to scrape river data")
