@@ -1,4 +1,4 @@
-     name: Rainfall Scraper
+name: Rainfall Scraper
 
 on:
   schedule:
