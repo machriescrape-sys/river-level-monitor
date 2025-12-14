@@ -1,50 +1,35 @@
-name: River and Rainfall Scraper
+name: River Level Scraper
 
-# Two schedules: river scraper every 15 min, rainfall scraper every hour
 on:
   schedule:
-    - cron: '*/15 * * * *'  # river scraper
-    - cron: '0 * * * *'     # hourly rainfall
+    - cron: '*/15 * * * *'  # every 15 minutes
   workflow_dispatch:
 
 jobs:
-  scrape:
+  scrape_river:
     runs-on: ubuntu-latest
-
     steps:
-      # 1️⃣ Checkout repo
       - uses: actions/checkout@v4
 
-      # 2️⃣ Setup Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # 3️⃣ Install dependencies
-      - name: Install Python dependencies
+      - name: Install dependencies
         run: |
           pip install playwright requests
 
-      # 4️⃣ Install Playwright browsers
       - name: Install Playwright browsers
         run: playwright install chromium
 
-      # 5️⃣ Run river scraper (every 15 min)
-      - name: Run river level scraper
-        if: github.event.schedule == '*/15 * * * *' || github.event_name == 'workflow_dispatch'
+      - name: Run river scraper
         run: python river_level_scraper.py
 
-      # 6️⃣ Run rainfall scraper (hourly)
-      - name: Run hourly rainfall scraper
-        if: github.event.schedule == '0 * * * *' || github.event_name == 'workflow_dispatch'
-        run: python rainfall_scraper.py
-
-      # 7️⃣ Commit CSV updates
       - name: Commit CSV updates
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add *.csv
-          git commit -m "Update river and rainfall data" || echo "No changes"
+          git add machrie_water_levels.csv
+          git commit -m "Update river level data" || echo "No changes"
           git push
