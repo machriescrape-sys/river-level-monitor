@@ -1,0 +1,4 @@
+     
+      - name: Run scraper
+        run: |
+          python rainfall_scraper.py
