@@ -10,20 +10,31 @@ CSV_FILE = "machrie_water_levels.csv"
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
     page = browser.new_page()
+
     page.goto(URL, timeout=60000)
 
-    page.wait_for_load_state("networkidle")
+    # Wait for ANY text that looks like a level (e.g. 0.79m)
+    page.wait_for_selector("text=/\\d+(\\.\\d+)?m/", timeout=60000)
 
-    # Dump all visible text that contains 'm'
-    texts = page.locator("text=/m$/").all_inner_texts()
+    level = None
+    measurement_time = None
 
-    print("FOUND TEXTS ENDING IN 'm':")
-    for t in texts:
-        print("-", t)
+    # Find all visible text nodes
+    texts = page.locator("body").inner_text().splitlines()
+
+    for i, line in enumerate(texts):
+        line = line.strip()
+        if re.fullmatch(r"\d+(\.\d+)?m", line):
+            level = line
+
+            # The timestamp is usually the next non-empty line
+            for next_line in texts[i + 1 : i + 5]:
+                if "At" in next_line:
+                    measurement_time = next_line.strip()
+                    break
+            break
 
     browser.close()
-
-raise RuntimeError("Stopping after text dump")
 
 if not level or not measurement_time:
     raise RuntimeError("Failed to scrape river data")
