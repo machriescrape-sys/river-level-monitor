@@ -1,24 +1,42 @@
-import requests
+from playwright.sync_api import sync_playwright
 import csv
 from datetime import datetime
 import os
+import re
 
-# JSON data endpoint used by the site
-URL = "https://riverlevels.uk/api/station/machrie-water-monyquil-farm"
-
+URL = "https://riverlevels.uk/machrie-water-monyquil-farm"
 CSV_FILE = "machrie_water_levels.csv"
 
-response = requests.get(URL, timeout=15)
-response.raise_for_status()
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    page = browser.new_page()
+    page.goto(URL, timeout=60000)
 
-data = response.json()
+    # Wait for the level to appear (text like 0.79m)
+    page.wait_for_selector("h2", timeout=60000)
 
-# Extract fields
-level = f"{data['latest_reading']['value']}m"
-measurement_time = data['latest_reading']['dateTime']
+    level = None
+    measurement_time = None
+
+    h2_elements = page.query_selector_all("h2")
+
+    for h2 in h2_elements:
+        text = h2.inner_text().strip()
+        if re.match(r"^\d+(\.\d+)?m$", text):
+            level = text
+            p_tag = h2.evaluate_handle(
+                "el => el.nextElementSibling"
+            )
+            if p_tag:
+                measurement_time = p_tag.inner_text()
+            break
+
+    browser.close()
+
+if not level or not measurement_time:
+    raise RuntimeError("Failed to scrape river data")
 
 scrape_time = datetime.utcnow().isoformat()
-
 file_exists = os.path.isfile(CSV_FILE)
 
 with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
