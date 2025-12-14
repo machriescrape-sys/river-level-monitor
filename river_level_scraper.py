@@ -1,8 +1,27 @@
 from playwright.sync_api import sync_playwright
 import csv
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import re
+
+def parse_measurement_time(text):
+    """
+    Converts:
+    'At 9:30am, Wednesday 13th December GMT'
+    -> ISO UTC string
+    """
+    text = text.replace("At ", "").replace(" GMT", "")
+    text = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', text)
+
+    dt = datetime.strptime(
+        text,
+        "%I:%M%p, %A %d %B"
+    )
+
+    # Year is not included, so assume current year
+    dt = dt.replace(year=datetime.utcnow().year, tzinfo=timezone.utc)
+
+    return dt.isoformat().replace("+00:00", "Z")
 
 URL = "https://riverlevels.uk/machrie-water-monyquil-farm"
 CSV_FILE = "machrie_water_levels.csv"
@@ -55,7 +74,7 @@ with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
     writer.writerow([
         scrape_time,
         level,
-        measurement_time
+        parse_measurement_time(measurement_time),
     ])
 
 print("Saved:", level, measurement_time)
