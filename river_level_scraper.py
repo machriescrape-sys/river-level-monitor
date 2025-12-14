@@ -2,6 +2,7 @@ from playwright.sync_api import sync_playwright
 import csv
 from datetime import datetime
 import os
+import re
 
 URL = "https://riverlevels.uk/machrie-water-monyquil-farm"
 CSV_FILE = "machrie_water_levels.csv"
@@ -11,28 +12,18 @@ with sync_playwright() as p:
     page = browser.new_page()
     page.goto(URL, timeout=60000)
 
-    # Wait until any text like "0.79m" appears
-    page.wait_for_function(
-        "() => document.body.innerText.match(/\\d+(\\.\\d+)?m/)"
-    )
+    page.wait_for_load_state("networkidle")
 
-    body_text = page.inner_text("body")
+    # Dump all visible text that contains 'm'
+    texts = page.locator("text=/m$/").all_inner_texts()
+
+    print("FOUND TEXTS ENDING IN 'm':")
+    for t in texts:
+        print("-", t)
 
     browser.close()
 
-# ---- Extract level ----
-level = None
-for token in body_text.split():
-    if token.endswith("m") and token[:-1].replace(".", "").isdigit():
-        level = token
-        break
-
-# ---- Extract measurement time ----
-measurement_time = None
-for line in body_text.splitlines():
-    if line.strip().startswith("At "):
-        measurement_time = line.strip()
-        break
+raise RuntimeError("Stopping after text dump")
 
 if not level or not measurement_time:
     raise RuntimeError("Failed to scrape river data")
