@@ -12,7 +12,7 @@ with sync_playwright() as p:
     page = browser.new_page()
     page.goto(URL, timeout=60000)
 
-    # Wait for the level to appear (text like 0.79m)
+    # Wait for headings to load
     page.wait_for_selector("h2", timeout=60000)
 
     level = None
@@ -24,13 +24,19 @@ with sync_playwright() as p:
         text = h2.inner_text().strip()
         if re.match(r"^\d+(\.\d+)?m$", text):
             level = text
-            p_tag = h2.evaluate_handle("el => el.nextElementSibling")
-if p_tag:
-    measurement_time = p_tag.as_element().inner_text()
 
-break
+            p_tag_handle = h2.evaluate_handle(
+                "el => el.nextElementSibling"
+            )
+            if p_tag_handle:
+                p_elem = p_tag_handle.as_element()
+                if p_elem:
+                    measurement_time = p_elem.inner_text().strip()
 
-browser.close()
+            break  # <-- THIS IS NOW CORRECTLY INSIDE THE LOOP
+
+    browser.close()
+
 
 if not level or not measurement_time:
     raise RuntimeError("Failed to scrape river data")
