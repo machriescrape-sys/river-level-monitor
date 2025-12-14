@@ -2,7 +2,6 @@ from playwright.sync_api import sync_playwright
 import csv
 from datetime import datetime
 import os
-import re
 
 URL = "https://riverlevels.uk/machrie-water-monyquil-farm"
 CSV_FILE = "machrie_water_levels.csv"
@@ -12,31 +11,28 @@ with sync_playwright() as p:
     page = browser.new_page()
     page.goto(URL, timeout=60000)
 
-    # Wait for headings to load
-    page.wait_for_selector("h2", timeout=60000)
+    # Wait until any text like "0.79m" appears
+    page.wait_for_function(
+        "() => document.body.innerText.match(/\\d+(\\.\\d+)?m/)"
+    )
 
-    level = None
-    measurement_time = None
-
-    h2_elements = page.query_selector_all("h2")
-
-    for h2 in h2_elements:
-        text = h2.inner_text().strip()
-        if re.match(r"^\d+(\.\d+)?m$", text):
-            level = text
-
-            p_tag_handle = h2.evaluate_handle(
-                "el => el.nextElementSibling"
-            )
-            if p_tag_handle:
-                p_elem = p_tag_handle.as_element()
-                if p_elem:
-                    measurement_time = p_elem.inner_text().strip()
-
-            break  # <-- THIS IS NOW CORRECTLY INSIDE THE LOOP
+    body_text = page.inner_text("body")
 
     browser.close()
 
+# ---- Extract level ----
+level = None
+for token in body_text.split():
+    if token.endswith("m") and token[:-1].replace(".", "").isdigit():
+        level = token
+        break
+
+# ---- Extract measurement time ----
+measurement_time = None
+for line in body_text.splitlines():
+    if line.strip().startswith("At "):
+        measurement_time = line.strip()
+        break
 
 if not level or not measurement_time:
     raise RuntimeError("Failed to scrape river data")
