@@ -30,7 +30,7 @@ if p_tag:
 
 break
 
-    browser.close()
+browser.close()
 
 if not level or not measurement_time:
     raise RuntimeError("Failed to scrape river data")
