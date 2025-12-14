@@ -1,0 +1,35 @@
+name: River Level Scraper
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4
+
+      - name: Run scraper
+        run: |
+          python river_level_scraper.py
+
+      - name: Commit updated CSV
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add machrie_water_levels.csv
+          git commit -m "Update river level data" || echo "No changes to commit"
+          git push
