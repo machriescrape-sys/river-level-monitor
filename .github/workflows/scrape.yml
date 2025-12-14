@@ -1,36 +1,46 @@
-name: Scrape river and rainfall data
+name: River and Rainfall Scraper
 
+# Two schedules: river scraper every 15 min, rainfall scraper every hour
 on:
   schedule:
-    - cron: '*/15 * * * *'  # every 15 minutes
+    - cron: '*/15 * * * *'  # river scraper
+    - cron: '0 * * * *'     # hourly rainfall
   workflow_dispatch:
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
+
     steps:
+      # 1️⃣ Checkout repo
       - uses: actions/checkout@v4
+
+      # 2️⃣ Setup Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
-        run: pip install playwright requests
+      # 3️⃣ Install dependencies
+      - name: Install Python dependencies
+        run: |
+          pip install playwright requests
 
+      # 4️⃣ Install Playwright browsers
       - name: Install Playwright browsers
         run: playwright install chromium
 
-      # Run river scraper only on 15-min schedule
+      # 5️⃣ Run river scraper (every 15 min)
       - name: Run river level scraper
-        if: github.event.schedule == '*/15 * * * *'
+        if: github.event.schedule == '*/15 * * * *' || github.event_name == 'workflow_dispatch'
         run: python river_level_scraper.py
 
-      # Run rainfall scraper only on hourly schedule
+      # 6️⃣ Run rainfall scraper (hourly)
       - name: Run hourly rainfall scraper
-        if: github.event.schedule == '0 * * * *'
+        if: github.event.schedule == '0 * * * *' || github.event_name == 'workflow_dispatch'
         run: python rainfall_scraper.py
 
+      # 7️⃣ Commit CSV updates
       - name: Commit CSV updates
         run: |
           git config user.name "github-actions"
