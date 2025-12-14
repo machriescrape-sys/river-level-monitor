@@ -58,7 +58,6 @@ with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
         measurement_time
     ])
 
-print("Saved:", level, measurement_time)
 
 # DEBUG: show page title and first 500 chars
 print("PAGE TITLE:", soup.title)
