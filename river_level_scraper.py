@@ -24,11 +24,10 @@ with sync_playwright() as p:
         text = h2.inner_text().strip()
         if re.match(r"^\d+(\.\d+)?m$", text):
             level = text
-            p_tag = h2.evaluate_handle(
-                "el => el.nextElementSibling"
-            )
-            if p_tag:
-                measurement_time = p_tag.inner_text()
+            p_tag = h2.evaluate_handle("el => el.nextElementSibling")
+if p_tag:
+    measurement_time = p_tag.as_element().inner_text()
+
             break
 
     browser.close()
