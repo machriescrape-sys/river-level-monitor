@@ -28,7 +28,7 @@ with sync_playwright() as p:
 if p_tag:
     measurement_time = p_tag.as_element().inner_text()
 
-            break
+break
 
     browser.close()
 
