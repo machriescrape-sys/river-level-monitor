@@ -8,26 +8,27 @@ on:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: |
-          pip install playwright requests
+        run: pip install playwright requests
 
       - name: Install Playwright browsers
         run: playwright install chromium
 
+      # Run river scraper only on 15-min schedule
       - name: Run river level scraper
+        if: github.event.schedule == '*/15 * * * *'
         run: python river_level_scraper.py
 
-      - name: Run rainfall scraper
+      # Run rainfall scraper only on hourly schedule
+      - name: Run hourly rainfall scraper
+        if: github.event.schedule == '0 * * * *'
         run: python rainfall_scraper.py
 
       - name: Commit CSV updates
