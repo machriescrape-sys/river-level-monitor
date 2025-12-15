@@ -9,7 +9,7 @@ from datetime import datetime, timezone, timedelta
 # ----------------------------
 STATION_NO = "133115"
 CSV_FILE = "monyquil_rainfall_hourly.csv"
-HOURS_LOOKBACK = 12  # fetch the last 12 hours
+HOURS_LOOKBACK = 24  # fetch the last 24 hours
 
 BASE_URL = (
     "https://timeseries.sepa.org.uk/KiWIS/KiWIS"
