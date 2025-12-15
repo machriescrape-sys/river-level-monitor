@@ -51,7 +51,13 @@ if "json" not in content_type.lower():
     print("Body preview:", response.text[:300])
     exit(0)
 
-data = response.json()
+try:
+    data = response.json()
+except ValueError as e:
+    print("SEPA returned invalid or empty JSON")
+    print("Body length:", len(response.text))
+    print("Body preview:", response.text[:300])
+    exit(0)  # graceful exit, do NOT fail workflow
 
 # ---- Load existing timestamps ----
 existing_ts = set()
