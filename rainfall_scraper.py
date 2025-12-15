@@ -98,9 +98,18 @@ if "json" not in content_type.lower():
     exit(0)
 
 data = response.json()
-values = data.get("values", [])
 
-if not values:
+# ----------------------------
+# Handle SEPA list response
+# ----------------------------
+if isinstance(data, list):
+    if not data:
+        print("No new rainfall data returned")
+        exit(0)
+    data = data[0]  # first station object
+
+values = data.get("values")
+if not values or not isinstance(values, list):
     print("No new rainfall data available")
     exit(0)
 
