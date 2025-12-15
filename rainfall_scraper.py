@@ -11,16 +11,9 @@ STATION_NO = "133115"
 CSV_FILE = "monyquil_rainfall_hourly.csv"
 HOURS_LOOKBACK = 24  # fetch the last 24 hours
 
-BASE_URL = (
-    f"https://timeseries.sepa.org.uk/KiWIS/KiWIS"
-    f"?service=kisters"
-    f"&type=queryServices"
-    f"&datasource=0"
-    f"&request=getTimeseriesValues"
-    f"&ts_path=1/{STATION_NO}/RE/Hour.Total"
-    f"&returnfields=Timestamp,Value"
-    f"&format=json"
-)
+STATION_NO = "133115"
+
+BASE_URL = f"https://timeseries.sepa.org.uk/KiWIS/KiWIS?service=kisters&type=queryServices&datasource=0&request=getTimeseriesValues&ts_path=1/{STATION_NO}/RE/Hour.Total&returnfields=Timestamp,Value&format=json"
 
 HEADERS = {
     "User-Agent": "river-level-monitor/1.0 (github actions)"
