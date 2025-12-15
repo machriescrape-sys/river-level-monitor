@@ -12,14 +12,14 @@ CSV_FILE = "monyquil_rainfall_hourly.csv"
 HOURS_LOOKBACK = 24  # fetch the last 24 hours
 
 BASE_URL = (
-    "https://timeseries.sepa.org.uk/KiWIS/KiWIS"
-    "?service=kisters"
-    "&type=queryServices"
-    "&datasource=0"
-    "&request=getTimeseriesValues"
+    f"https://timeseries.sepa.org.uk/KiWIS/KiWIS"
+    f"?service=kisters"
+    f"&type=queryServices"
+    f"&datasource=0"
+    f"&request=getTimeseriesValues"
     f"&ts_path=1/{STATION_NO}/RE/Hour.Total"
-    "&returnfields=Timestamp,Value"
-    "&format=json"
+    f"&returnfields=Timestamp,Value"
+    f"&format=json"
 )
 
 HEADERS = {
@@ -27,7 +27,7 @@ HEADERS = {
 }
 
 # ----------------------------
-# Determine starting timestamp
+# Calculate 'from' timestamp for 24-hour lookback
 # ----------------------------
 now_utc = datetime.now(timezone.utc)
 from_time = now_utc - timedelta(hours=HOURS_LOOKBACK)
@@ -36,7 +36,7 @@ from_param = from_time.strftime("%Y-%m-%dT%H:%M:%S")
 URL = BASE_URL + f"&from={from_param}"
 
 # ----------------------------
-# Request with retry & rate-limit handling
+# Request with retry + rate-limit handling
 # ----------------------------
 response = None
 for attempt in range(5):
@@ -80,7 +80,7 @@ if isinstance(data, list):
         exit(0)
     data = data[0]  # first station object
 
-values = data.get("values")
+values = data.get("values") or data.get("timeseries") or []
 if not values or not isinstance(values, list):
     print("No rainfall data available")
     exit(0)
