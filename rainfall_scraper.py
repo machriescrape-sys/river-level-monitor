@@ -12,7 +12,7 @@ CSV_FILE = "monyquil_rainfall_hourly.csv"
 HOURS_LOOKBACK = 24  # last 24 hours
 
 # Build SEPA URL
-BASE_URL = (https://timeseries.sepa.org.uk/KiWIS/KiWIS?service=kisters&type=queryServices&datasource=0&request=getTimeseriesValues&ts_path=1/133115/RE/Hour.Total&returnfields=Timestamp,Value&format=json
+BASE_URL = ("https://timeseries.sepa.org.uk/KiWIS/KiWIS?service=kisters&type=queryServices&datasource=0&request=getTimeseriesValues&ts_path=1/133115/RE/Hour.Total&returnfields=Timestamp,Value&format=json"
 )
 
 HEADERS = {
