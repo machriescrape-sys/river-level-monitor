@@ -9,18 +9,18 @@ from datetime import datetime, timezone, timedelta
 # ----------------------------
 STATION_NO = "133115"
 CSV_FILE = "monyquil_rainfall_hourly.csv"
-HOURS_LOOKBACK = 24  # fetch the last 24 hours
+HOURS_LOOKBACK = 24  # last 24 hours
 
-STATION_NO = "133115"
-
-BASE_URL = "https://timeseries.sepa.org.uk/KiWIS/KiWIS?service=kisters&type=queryServices&datasource=0&request=getTimeseriesValues&ts_path=1/133115/RE/Hour.Total&returnfields=Timestamp,Value&format=json"
+# Build SEPA URL
+BASE_URL = (https://timeseries.sepa.org.uk/KiWIS/KiWIS?service=kisters&type=queryServices&datasource=0&request=getTimeseriesValues&ts_path=1/133115/RE/Hour.Total&returnfields=Timestamp,Value&format=json
+)
 
 HEADERS = {
     "User-Agent": "river-level-monitor/1.0 (github actions)"
 }
 
 # ----------------------------
-# Calculate 'from' timestamp for 24-hour lookback
+# Calculate 'from' timestamp
 # ----------------------------
 now_utc = datetime.now(timezone.utc)
 from_time = now_utc - timedelta(hours=HOURS_LOOKBACK)
@@ -62,20 +62,20 @@ if "json" not in content_type.lower():
     print("Body preview:", response.text[:300])
     exit(0)
 
-data = response.json()
+raw = response.json()
 
 # ----------------------------
-# Handle SEPA list response
+# Extract data from SEPA format
 # ----------------------------
-if isinstance(data, list):
-    if not data:
-        print("No rainfall data returned")
-        exit(0)
-    data = data[0]  # first station object
+if not raw or not isinstance(raw, list):
+    print("Unexpected SEPA JSON format")
+    exit(0)
 
-values = data.get("values") or data.get("timeseries") or []
-if not values or not isinstance(values, list):
-    print("No rainfall data available")
+station = raw[0]  # first station
+values = station.get("data", [])
+
+if not values:
+    print("No new rainfall data available")
     exit(0)
 
 # ----------------------------
@@ -102,11 +102,11 @@ with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
 
     new_rows = 0
     for row in values:
-        ts = datetime.fromisoformat(row["Timestamp"]).astimezone(timezone.utc)
-        ts_iso = ts.isoformat().replace("+00:00", "Z")
+        ts_iso = row[0]  # already in ISO format
+        val = row[1]
 
         if ts_iso not in existing_ts:
-            writer.writerow([ts_iso, row["Value"]])
+            writer.writerow([ts_iso, val])
             new_rows += 1
 
 print(f"Rainfall scraper completed — added {new_rows} new rows")
