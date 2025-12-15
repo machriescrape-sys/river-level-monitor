@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 STATION_NO = "133115"
 CSV_FILE = "monyquil_rainfall_hourly.csv"
 
-BASE_URL = (
+URL = (
     "https://timeseries.sepa.org.uk/KiWIS/KiWIS"
     "?service=kisters"
     "&type=queryServices"
@@ -15,6 +15,7 @@ BASE_URL = (
     "&request=getTimeseriesValues"
     f"&ts_path=1/{STATION_NO}/RE/Hour.Total"
     "&returnfields=Timestamp,Value"
+    "&format=json"
 )
 
 HEADERS = {
