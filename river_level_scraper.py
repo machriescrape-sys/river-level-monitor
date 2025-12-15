@@ -26,6 +26,17 @@ def parse_measurement_time(text):
 URL = "https://riverlevels.uk/machrie-water-monyquil-farm"
 CSV_FILE = "machrie_water_levels.csv"
 
+def load_existing_measurement_times(csv_file):
+    times = set()
+    if os.path.isfile(csv_file):
+        with open(csv_file, "r", encoding="utf-8") as f:
+            next(f, None)  # skip header
+            for row in f:
+                parts = row.strip().split(",")
+                if len(parts) >= 3:
+                    times.add(parts[2])  # measurement_time column
+    return times
+
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
     page = browser.new_page()
@@ -58,23 +69,29 @@ with sync_playwright() as p:
 if not level or not measurement_time:
     raise RuntimeError("Failed to scrape river data")
 
-scrape_time = datetime.utcnow().isoformat()
+scrape_time = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+measurement_time_iso = parse_measurement_time(measurement_time)
+
+existing_times = load_existing_measurement_times(CSV_FILE)
 file_exists = os.path.isfile(CSV_FILE)
 
-with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
-    writer = csv.writer(f)
+if measurement_time_iso in existing_times:
+    print("Measurement already recorded:", measurement_time_iso)
+else:
+    with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
 
-    if not file_exists:
+        if not file_exists:
+            writer.writerow([
+                "scrape_time_utc",
+                "river_level",
+                "measurement_time_utc"
+            ])
+
         writer.writerow([
-            "scrape_time_utc",
-            "river_level",
-            "measurement_time"
+            scrape_time,
+            level,
+            measurement_time_iso
         ])
 
-    writer.writerow([
-        scrape_time,
-        level,
-        parse_measurement_time(measurement_time)
-    ])
-
-print("Saved:", level, measurement_time)
+    print("Saved new measurement:", level, measurement_time_iso)
