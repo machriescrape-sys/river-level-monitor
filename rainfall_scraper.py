@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 STATION_NO = "133115"
 CSV_FILE = "monyquil_rainfall_hourly.csv"
 
-URL = (
+BASE_URL = (
     "https://timeseries.sepa.org.uk/KiWIS/KiWIS"
     "?service=kisters"
     "&type=queryServices"
@@ -17,14 +17,56 @@ URL = (
     "&returnfields=Timestamp,Value"
 )
 
-headers = {
-    "User-Agent": "river-level-monitor/1.0 (contact: github actions)"
+HEADERS = {
+    "User-Agent": "river-level-monitor/1.0 (github actions)"
 }
 
-# ---- Request with retry ----
+# --------------------------------------------------
+# Read latest timestamp from CSV
+# --------------------------------------------------
+def latest_timestamp_in_csv(csv_file):
+    if not os.path.exists(csv_file):
+        return None
+
+    with open(csv_file, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        next(reader, None)
+        rows = list(reader)
+
+        if not rows:
+            return None
+
+        ts = rows[-1][0].replace("Z", "+00:00")
+        return datetime.fromisoformat(ts)
+
+
+latest_ts = latest_timestamp_in_csv(CSV_FILE)
+
+# Current hour (UTC, floored)
+now_hour = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+
+# --------------------------------------------------
+# LEVEL 1: Skip request if already up to date
+# --------------------------------------------------
+if latest_ts and latest_ts >= now_hour:
+    print("Rainfall data already up to date — skipping SEPA request")
+    exit(0)
+
+# --------------------------------------------------
+# LEVEL 2: Request only new data
+# --------------------------------------------------
+URL = BASE_URL
+if latest_ts:
+    from_param = latest_ts.strftime("%Y-%m-%dT%H:%M:%S")
+    URL += f"&from={from_param}"
+
+# --------------------------------------------------
+# Request with retry + rate-limit handling
+# --------------------------------------------------
 response = None
+
 for attempt in range(5):
-    response = requests.get(URL, headers=headers, timeout=30)
+    response = requests.get(URL, headers=HEADERS, timeout=30)
 
     if response.status_code == 429:
         wait = 15 * (attempt + 1)
@@ -36,14 +78,16 @@ for attempt in range(5):
         print("Non-200 response from SEPA")
         print("Status:", response.status_code)
         print("Body preview:", response.text[:300])
-        exit(0)  # do NOT fail the workflow
+        exit(0)
 
     break
 else:
     print("Failed to fetch rainfall data after retries")
     exit(0)
 
-# ---- Ensure response is JSON ----
+# --------------------------------------------------
+# Ensure JSON response
+# --------------------------------------------------
 content_type = response.headers.get("Content-Type", "")
 if "json" not in content_type.lower():
     print("SEPA returned non-JSON response")
@@ -51,34 +95,43 @@ if "json" not in content_type.lower():
     print("Body preview:", response.text[:300])
     exit(0)
 
-try:
-    data = response.json()
-except ValueError as e:
-    print("SEPA returned invalid or empty JSON")
-    print("Body length:", len(response.text))
-    print("Body preview:", response.text[:300])
-    exit(0)  # graceful exit, do NOT fail workflow
+data = response.json()
 
-# ---- Load existing timestamps ----
+values = data.get("values", [])
+if not values:
+    print("No new rainfall data available")
+    exit(0)
+
+# --------------------------------------------------
+# Load existing timestamps (duplicate protection)
+# --------------------------------------------------
 existing_ts = set()
 if os.path.exists(CSV_FILE):
     with open(CSV_FILE, "r", encoding="utf-8") as f:
-        next(f, None)
-        for line in f:
-            ts, _ = line.strip().split(",")
-            existing_ts.add(ts)
+        reader = csv.reader(f)
+        next(reader, None)
+        for row in reader:
+            existing_ts.add(row[0])
 
-# ---- Write new rows only ----
+# --------------------------------------------------
+# Write new rows only
+# --------------------------------------------------
+file_exists = os.path.exists(CSV_FILE)
+
 with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
     writer = csv.writer(f)
-    if not existing_ts:
+
+    if not file_exists:
         writer.writerow(["timestamp_utc", "rainfall_mm"])
 
-    for row in data.get("values", []):
+    new_rows = 0
+
+    for row in values:
         ts = datetime.fromisoformat(row["Timestamp"]).astimezone(timezone.utc)
         ts_iso = ts.isoformat().replace("+00:00", "Z")
 
         if ts_iso not in existing_ts:
             writer.writerow([ts_iso, row["Value"]])
+            new_rows += 1
 
-print("Rainfall scraper completed successfully")
+print(f"Rainfall scraper completed — added {new_rows} new rows")
