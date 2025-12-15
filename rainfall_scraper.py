@@ -2,13 +2,14 @@ import time
 import requests
 import csv
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 # ----------------------------
 # Configuration
 # ----------------------------
 STATION_NO = "133115"
 CSV_FILE = "monyquil_rainfall_hourly.csv"
+HOURS_LOOKBACK = 12  # fetch the last 12 hours
 
 BASE_URL = (
     "https://timeseries.sepa.org.uk/KiWIS/KiWIS"
@@ -26,42 +27,13 @@ HEADERS = {
 }
 
 # ----------------------------
-# Helper: latest timestamp in CSV
+# Determine starting timestamp
 # ----------------------------
-def latest_timestamp_in_csv(csv_file):
-    if not os.path.exists(csv_file):
-        return None
+now_utc = datetime.now(timezone.utc)
+from_time = now_utc - timedelta(hours=HOURS_LOOKBACK)
+from_param = from_time.strftime("%Y-%m-%dT%H:%M:%S")
 
-    with open(csv_file, "r", encoding="utf-8") as f:
-        reader = csv.reader(f)
-        next(reader, None)  # skip header
-        rows = list(reader)
-
-        if not rows:
-            return None
-
-        ts = rows[-1][0].replace("Z", "+00:00")
-        return datetime.fromisoformat(ts)
-
-latest_ts = latest_timestamp_in_csv(CSV_FILE)
-
-# Current hour UTC, floored
-now_hour = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
-
-# ----------------------------
-# LEVEL 1: Skip if already up to date
-# ----------------------------
-if latest_ts and latest_ts >= now_hour:
-    print("Rainfall data already up to date — skipping SEPA request")
-    exit(0)
-
-# ----------------------------
-# LEVEL 2: Request only new data
-# ----------------------------
-URL = BASE_URL
-if latest_ts:
-    from_param = latest_ts.strftime("%Y-%m-%dT%H:%M:%S")
-    URL += f"&from={from_param}"
+URL = BASE_URL + f"&from={from_param}"
 
 # ----------------------------
 # Request with retry & rate-limit handling
@@ -104,13 +76,13 @@ data = response.json()
 # ----------------------------
 if isinstance(data, list):
     if not data:
-        print("No new rainfall data returned")
+        print("No rainfall data returned")
         exit(0)
     data = data[0]  # first station object
 
 values = data.get("values")
 if not values or not isinstance(values, list):
-    print("No new rainfall data available")
+    print("No rainfall data available")
     exit(0)
 
 # ----------------------------
