@@ -1,80 +1,45 @@
-from playwright.sync_api import sync_playwright
 import csv
-from datetime import datetime, timezone
 import os
-import re
+from datetime import datetime, timezone
+from playwright.sync_api import sync_playwright
 
-def parse_measurement_time(text):
-    """
-    Converts:
-    'At 9:30am, Wednesday 13th December GMT'
-    -> ISO UTC string
-    """
-    text = text.replace("At ", "").replace(" GMT", "")
-    text = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', text)
-
-    dt = datetime.strptime(
-        text,
-        "%I:%M%p, %A %d %B"
-    )
-
-    # Year is not included, so assume current year
-    dt = dt.replace(year=datetime.utcnow().year, tzinfo=timezone.utc)
-
-    return dt.isoformat().replace("+00:00", "Z")
-
-URL = "https://riverlevels.uk/machrie-water-monyquil-farm"
 CSV_FILE = "machrie_water_levels.csv"
 
+# Start Playwright and scrape river level & timestamp (example)
 with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True)
+    browser = p.chromium.launch()
     page = browser.new_page()
+    page.goto("https://riverlevels.uk/machrie-water-monyquil-farm")
+    page.wait_for_load_state("networkidle")
 
-    page.goto(URL, timeout=60000)
-
-    # Wait for ANY text that looks like a level (e.g. 0.79m)
-    page.wait_for_selector("text=/\\d+(\\.\\d+)?m/", timeout=60000)
-
-    level = None
-    measurement_time = None
-
-    # Find all visible text nodes
-    texts = page.locator("body").inner_text().splitlines()
-
-    for i, line in enumerate(texts):
-        line = line.strip()
-        if re.fullmatch(r"\d+(\.\d+)?m", line):
-            level = line
-
-            # The timestamp is usually the next non-empty line
-            for next_line in texts[i + 1 : i + 5]:
-                if "At" in next_line:
-                    measurement_time = next_line.strip()
-                    break
-            break
-
+    # Replace these selectors with actual ones
+    river_level = page.query_selector(".station-level").inner_text()
+    measurement_time = page.query_selector(".station-time").inner_text()
     browser.close()
 
-if not level or not measurement_time:
-    raise RuntimeError("Failed to scrape river data")
+# Convert measurement_time to UTC ISO
+# Adjust parsing depending on the format of measurement_time
+measurement_dt = datetime.strptime(measurement_time, "%Y-%m-%d %H:%M")
+measurement_dt_utc = measurement_dt.astimezone(timezone.utc)
+ts_iso = measurement_dt_utc.isoformat().replace("+00:00", "Z")
 
-scrape_time = datetime.utcnow().isoformat()
-file_exists = os.path.isfile(CSV_FILE)
+# Load existing timestamps
+existing_ts = set()
+if os.path.isfile(CSV_FILE):
+    with open(CSV_FILE, "r", encoding="utf-8") as f:
+        next(f)  # skip header
+        for line in f:
+            ts, _ = line.strip().split(",")
+            existing_ts.add(ts)
 
+# Append only if timestamp is new
 with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
     writer = csv.writer(f)
+    if not existing_ts:
+        writer.writerow(["measurement_time_utc", "river_level"])
+    if ts_iso not in existing_ts:
+        writer.writerow([ts_iso, river_level])
+        print(f"Added new measurement: {ts_iso}, {river_level}")
+    else:
+        print(f"Measurement already exists: {ts_iso}")
 
-    if not file_exists:
-        writer.writerow([
-            "scrape_time_utc",
-            "river_level",
-            "measurement_time"
-        ])
-
-    writer.writerow([
-        scrape_time,
-        level,
-        parse_measurement_time(measurement_time),
-    ])
-
-print("Saved:", level, measurement_time)
