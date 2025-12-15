@@ -1,6 +1,6 @@
 from playwright.sync_api import sync_playwright
 import csv
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import re
 
