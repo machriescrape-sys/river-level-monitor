@@ -85,8 +85,11 @@ existing_ts = set()
 if os.path.exists(CSV_FILE):
     with open(CSV_FILE, "r", encoding="utf-8") as f:
         reader = csv.reader(f)
-        next(reader, None)
+        next(reader, None)  # skip header
+
         for row in reader:
+            if not row or len(row) < 1:
+                continue
             existing_ts.add(row[0])
 
 # ----------------------------
