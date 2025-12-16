@@ -41,7 +41,19 @@ with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
     page = browser.new_page()
 
-    page.goto(URL, timeout=60000)
+   for attempt in range(3):
+    try:
+        page.goto(
+            URL,
+            wait_until="domcontentloaded",
+            timeout=60000
+        )
+        break
+    except Exception as e:
+        if attempt == 2:
+            raise
+        print("Page load failed, retrying...")
+        time.sleep(5)
 
     # Wait for ANY text that looks like a level (e.g. 0.79m)
     page.wait_for_selector("text=/\\d+(\\.\\d+)?m/", timeout=60000)
