@@ -33,4 +33,5 @@ jobs:
           git config user.email "github-actions@github.com"
           git add machrie_water_levels.csv
           git commit -m "Update river level data" || echo "No changes"
+          git pull --rebase
           git push
