@@ -41,14 +41,14 @@ with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
     page = browser.new_page()
 
-   for attempt in range(3):
-    try:
-        page.goto(
-            URL,
-            wait_until="domcontentloaded",
-            timeout=60000
-        )
-        break
+    for attempt in range(3):
+        try:
+            page.goto(
+                URL,
+                wait_until="domcontentloaded",
+                timeout=60000
+            )
+            break
     except Exception as e:
         if attempt == 2:
             raise
