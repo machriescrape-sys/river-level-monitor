@@ -39,16 +39,30 @@ def load_existing_measurement_times(csv_file):
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
-    page = browser.new_page()
 
-    for attempt in range(3):
+    page = None
+    for attempt in range(1, 4):
         try:
+            if page:
+                page.close()
+
+            page = browser.new_page()
             page.goto(
                 URL,
                 wait_until="domcontentloaded",
                 timeout=60000
             )
+
+            print(f"Page loaded on attempt {attempt}")
             break
+
+        except TimeoutError:
+            print(f"Timeout loading page (attempt {attempt}/3)")
+            time.sleep(5)
+
+    else:
+        browser.close()
+        raise RuntimeError("Failed to load page after 3 attempts")
     except Exception as e:
         if attempt == 2:
             raise
