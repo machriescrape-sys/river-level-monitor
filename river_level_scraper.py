@@ -63,11 +63,6 @@ with sync_playwright() as p:
     else:
         browser.close()
         raise RuntimeError("Failed to load page after 3 attempts")
-    except Exception as e:
-        if attempt == 2:
-            raise
-        print("Page load failed, retrying...")
-        time.sleep(5)
 
     # Wait for ANY text that looks like a level (e.g. 0.79m)
     page.wait_for_selector("text=/\\d+(\\.\\d+)?m/", timeout=60000)
